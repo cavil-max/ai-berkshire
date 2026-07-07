@@ -1,7 +1,7 @@
 # AI Berkshire Codex Guide
 
 This repository contains investment research workflows, reports, and shared
-validation tools. Keep compatibility with both Claude Code and Codex users.
+validation tools. Keep compatibility with Claude Code, Codex, and OpenClaw users.
 
 ## Project Layout
 
@@ -11,12 +11,18 @@ validation tools. Keep compatibility with both Claude Code and Codex users.
   marked and no same-named `skills/*.md` source exists.
 - `codex-prompts/*.md`: generated Codex custom prompts for slash-command
   style entry points. These are a compatibility layer; skills remain preferred.
-- `tools/*.py`: shared financial validation and data tools used by both systems.
+- `openclaw-skills/*/SKILL.md`: OpenClaw skill packages generated from
+  `skills/*.md` by `scripts/sync-openclaw-skills.py`. They follow the
+  AgentSkills spec and load from `~/.openclaw/workspace/skills` by default.
+- `tools/*.py`: shared financial validation and data tools used by all three systems.
 - `reports/`: research outputs. Do not rewrite unrelated reports while changing
   tooling or skills.
 - `scripts/sync-codex-skills.py`: regenerates Codex skills from `skills/*.md`.
+- `scripts/sync-openclaw-skills.py`: regenerates OpenClaw skills from `skills/*.md`.
 - `scripts/install-codex-skills.sh` / `scripts/install-codex-skills.bat`:
   installs Codex skills locally.
+- `scripts/install-openclaw-skills.sh` / `scripts/install-openclaw-skills.bat`:
+  installs OpenClaw skills locally.
 - `scripts/install-codex-prompts.sh` / `scripts/install-codex-prompts.bat`:
   installs generated Codex slash prompts locally.
 - `scripts/install-claude-commands.sh` / `scripts/install-claude-commands.bat`:
@@ -29,8 +35,11 @@ validation tools. Keep compatibility with both Claude Code and Codex users.
   `python3 scripts/sync-codex-skills.py`
 - If slash prompt compatibility is needed, also run:
   `python3 scripts/sync-codex-prompts.py`
-- Do not manually edit generated `codex-skills/*/SKILL.md` unless also updating
-  the corresponding source in `skills/`.
+- If OpenClaw compatibility is needed, also run:
+  `python3 scripts/sync-openclaw-skills.py`
+- Do not manually edit generated `codex-skills/*/SKILL.md` or
+  `openclaw-skills/*/SKILL.md` unless also updating the corresponding source in
+  `skills/`.
 - For Codex-only hand-written packages under `codex-skills/`, keep them clearly
   marked as Codex-only and do not create a same-named `skills/*.md` file unless
   intentionally adopting the workflow for Claude Code too.
@@ -63,7 +72,10 @@ validation tools. Keep compatibility with both Claude Code and Codex users.
 - Before finishing a skill/tool change, run the relevant syntax or generation
   check. For compatibility changes, run:
   `python3 scripts/sync-codex-skills.py`
+  `python3 scripts/sync-openclaw-skills.py`
 - To verify generated Codex artifacts are current without rewriting files, run:
   `python3 scripts/sync-codex-skills.py --check`
   and, when slash prompts are relevant:
   `python3 scripts/sync-codex-prompts.py --check`
+  and, when OpenClaw skills are relevant:
+  `python3 scripts/sync-openclaw-skills.py --check`

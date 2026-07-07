@@ -3,12 +3,15 @@
 ## 项目概述
 
 基于 Claude Code 的价值投资研究 Skill 合集。四大师框架：巴菲特、芒格、段永平、李录。
+同时兼容 Codex 与 OpenClaw：`codex-skills/` 与 `openclaw-skills/` 由脚本从 `skills/` 生成。
 GitHub: xbtlin/ai-berkshire
 
 ## 项目结构
 
 ```
 skills/          — 投研 Skill 定义（.md），复制到 ~/.claude/commands/ 使用
+codex-skills/    — Codex skill 包，由 scripts/sync-codex-skills.py 生成
+openclaw-skills/ — OpenClaw skill 包，由 scripts/sync-openclaw-skills.py 生成
 tools/           — 辅助工具（financial_rigor.py 精确计算）
 reports/         — 投资研究报告输出
 assets/          — 图片等静态资源
@@ -109,3 +112,21 @@ git push origin main
 - 货币单位要明确（港币/人民币/美元），防止混淆
 - PE/ROE等指标用 tools/financial_rigor.py 精确计算
 - 报告写完后主动询问是否推送到GitHub
+
+## OpenClaw 使用
+
+OpenClaw 用户通过 `openclaw-skills/` 加载本框架 skill：
+
+```bash
+# 批量 symlink 到 OpenClaw workspace（默认 ~/.openclaw/workspace/skills）
+./scripts/install-openclaw-skills.sh
+
+# 或安装到对所有 agent 可见的共享目录
+./scripts/install-openclaw-skills.sh --global
+
+# 或单独安装某个 skill
+openclaw skills install ./openclaw-skills/investment-research --as investment-research
+```
+
+安装后重启 OpenClaw 或开新会话，skill 会以 slash command 形式可用。
+修改 `skills/*.md` 后，运行 `python3 scripts/sync-openclaw-skills.py` 重新生成。
