@@ -1,0 +1,30 @@
+name: Sync Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Python syntax check
+        run: python3 -m py_compile tools/*.py scripts/*.py
+
+      - name: Check Codex skills
+        run: python3 scripts/sync-codex-skills.py --check
+
+      - name: Check Codex prompts
+        run: python3 scripts/sync-codex-prompts.py --check
+
+      - name: Check OpenClaw skills
+        run: python3 scripts/sync-openclaw-skills.py --check

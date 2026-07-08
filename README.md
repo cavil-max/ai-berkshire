@@ -8,9 +8,9 @@
 >
 > 用 AI 重新定义投资研究的深度与效率。
 
-**AI Berkshire** 是一套同时兼容 Claude Code 与 Codex 的投资研究 Skill 合集，将巴菲特、芒格、段永平、李录四位价值投资大师的方法论系统化、结构化，通过 AI Agent 实现专业级投资研究。
+**AI Berkshire** 是一套同时兼容 Claude Code、Codex 与 OpenClaw 的投资研究 Skill 合集，将巴菲特、芒格、段永平、李录四位价值投资大师的方法论系统化、结构化，通过 AI Agent 实现专业级投资研究。
 
-一个人 + Claude Code / Codex = 一个投研团队。
+一个人 + Claude Code / Codex / OpenClaw = 一个投研团队。
 
 > 📮 **仓库是全量框架，公众号是精选。** 真正值得深研的公司，加上报告之外我自己的判断与取舍，都在微信公众号「**复利炼丹炉**」——[扫码关注 ↓](#精选研究首发于公众号)
 
@@ -174,6 +174,8 @@ AI Berkshire 确保：**同样的输入 → 结构一致、深度一致的输出
 
 ## Skills 一览（19个）
 
+> 以下 19 个 Skill 均同时提供 Claude Code / Codex / OpenClaw 版本。
+
 ### 🔬 深度研究类
 
 | Skill | 用途 | 适合场景 |
@@ -232,7 +234,7 @@ AI Berkshire 确保：**同样的输入 → 结构一致、深度一致的输出
 
 ### 1. 安装 AI 客户端
 
-本仓库保留同一套 canonical workflow，并分别提供 Claude Code commands 与 Codex skills。按你使用的客户端安装即可。
+本仓库保留同一套 canonical workflow，并分别提供 Claude Code commands、Codex skills 与 OpenClaw skills。按你使用的客户端安装即可。
 
 Claude Code 用户：
 
@@ -278,7 +280,7 @@ Claude Code 用户安装（macOS / Linux）：
 
 ```bash
 # 克隆仓库
-git clone https://github.com/xbtlin/ai-berkshire.git
+git clone https://github.com/cavil-max/ai-berkshire.git
 
 # 复制 skills 到 Claude Code 全局 commands 目录
 cd ai-berkshire
@@ -288,7 +290,7 @@ cd ai-berkshire
 Claude Code 用户安装（Windows PowerShell / Command Prompt）：
 
 ```bat
-git clone https://github.com/xbtlin/ai-berkshire.git
+git clone https://github.com/cavil-max/ai-berkshire.git
 cd ai-berkshire
 .\scripts\install-claude-commands.bat
 ```
@@ -297,7 +299,7 @@ Codex 用户安装（macOS / Linux）：
 
 ```bash
 # 克隆仓库
-git clone https://github.com/xbtlin/ai-berkshire.git
+git clone https://github.com/cavil-max/ai-berkshire.git
 
 # 生成并安装 Codex skills 到 ~/.codex/skills
 cd ai-berkshire
@@ -311,7 +313,7 @@ cd ai-berkshire
 Codex 用户安装（Windows PowerShell / Command Prompt）：
 
 ```bat
-git clone https://github.com/xbtlin/ai-berkshire.git
+git clone https://github.com/cavil-max/ai-berkshire.git
 cd ai-berkshire
 .\scripts\install-codex-skills.bat
 
@@ -319,7 +321,32 @@ REM 可选：安装 Codex slash prompts
 .\scripts\install-codex-prompts.bat
 ```
 
-仓库同时维护三套入口：`skills/*.md` 是 Claude Code command 源文件；`codex-skills/*/SKILL.md` 是 Codex skill 包，由 `scripts/sync-codex-skills.py` 从 `skills/*.md` 生成；`codex-prompts/*.md` 是可选的 Codex slash prompt 兼容层。
+OpenClaw 用户安装（macOS / Linux）：
+
+```bash
+# 克隆仓库
+git clone https://github.com/cavil-max/ai-berkshire.git
+
+# 生成并安装 OpenClaw skills 到 ~/.openclaw/workspace/skills
+cd ai-berkshire
+./scripts/install-openclaw-skills.sh
+
+# 或安装到对所有 agent 可见的共享目录
+./scripts/install-openclaw-skills.sh --global
+
+# 或只安装某个 skill
+openclaw skills install ./openclaw-skills/investment-research --as investment-research
+```
+
+OpenClaw 用户安装（Windows PowerShell / Command Prompt）：
+
+```bat
+git clone https://github.com/cavil-max/ai-berkshire.git
+cd ai-berkshire
+.\scripts\install-openclaw-skills.bat
+```
+
+仓库同时维护三套入口：`skills/*.md` 是 Claude Code command 源文件；`codex-skills/*/SKILL.md` 是 Codex skill 包，由 `scripts/sync-codex-skills.py` 从 `skills/*.md` 生成；`openclaw-skills/*/SKILL.md` 是 OpenClaw skill 包，由 `scripts/sync-openclaw-skills.py` 从 `skills/*.md` 生成；`codex-prompts/*.md` 是可选的 Codex slash prompt 兼容层。
 
 ### 3. 使用
 
@@ -709,4 +736,4 @@ MIT License
 
 如果这个项目对你有帮助，请给一个 Star 支持！精选公司研究与个人判断首发于微信公众号「**复利炼丹炉**」（二维码见[文首](#精选研究首发于公众号)）。
 
-[![Star History Chart](https://api.star-history.com/svg?repos=xbtlin/ai-berkshire&type=Date)](https://star-history.com/#xbtlin/ai-berkshire&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=cavil-max/ai-berkshire&type=Date)](https://star-history.com/#cavil-max/ai-berkshire&Date)
