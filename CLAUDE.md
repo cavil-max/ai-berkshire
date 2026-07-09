@@ -130,3 +130,29 @@ openclaw skills install ./openclaw-skills/investment-research --as investment-re
 
 安装后重启 OpenClaw 或开新会话，skill 会以 slash command 形式可用。
 修改 `skills/*.md` 后，运行 `python3 scripts/sync-openclaw-skills.py` 重新生成。
+
+## opencode 使用
+
+opencode 用户在本项目目录下自动加载 `opencode.json` 配置和 `.opencode/` 下的
+commands 与 skills，无需额外安装。commands 以 slash command 形式可用
+（如 `/investment-research 腾讯`），skills 根据描述自动触发。
+
+```bash
+# 在项目目录下直接使用 opencode，commands 和 skills 自动可用
+cd ~/ai-berkshire
+opencode
+
+# 修改 skills/*.md 后重新生成 opencode 产物
+python3 scripts/sync-opencode.py
+
+# 如需在其他项目也能使用这些 commands，安装到全局
+./scripts/install-opencode.sh
+
+# 同时安装 skills 到全局
+./scripts/install-opencode.sh --skills
+
+# 校验产物是否最新（不重写文件）
+python3 scripts/sync-opencode.py --check
+```
+
+安装后重启 opencode 或开新会话，commands 会以 slash command 形式可用。
