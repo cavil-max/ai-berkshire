@@ -5,12 +5,15 @@
 """
 
 import json
-import subprocess
 import time
 import csv
 import os
+import urllib.request
 from datetime import datetime
 
+# NOTE: URL 中的 klr5zyak8x 是 Morningstar 的会话/实例标识，可能随时失效。
+#       如果 fetch_page() 持续报错，需要从浏览器访问 morningstar.com 筛选器页面，
+#       从网络请求中提取新的标识符替换此处的 klr5zyak8x。
 API_BASE = (
     "https://lt.morningstar.com/api/rest.svc/klr5zyak8x/security/screener"
     "?page={page}&pageSize={page_size}"
@@ -32,13 +35,12 @@ def fetch_page(page: int) -> dict:
     url = API_BASE.format(page=page, page_size=PAGE_SIZE)
     for attempt in range(3):
         try:
-            result = subprocess.run(
-                ["curl", "-s", "-H", "User-Agent: Mozilla/5.0", url],
-                capture_output=True, text=True, timeout=30,
+            req = urllib.request.Request(
+                url,
+                headers={"User-Agent": "Mozilla/5.0"},
             )
-            if result.returncode != 0 or not result.stdout.strip():
-                raise ConnectionError(f"curl returncode={result.returncode}, empty response")
-            return json.loads(result.stdout)
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return json.loads(resp.read().decode())
         except Exception as e:
             if attempt < 2:
                 wait = 2 ** attempt
@@ -62,7 +64,15 @@ def main():
 
     # 第一页获取总数
     print("  正在获取第 1 页...")
-    data = fetch_page(1)
+    try:
+        data = fetch_page(1)
+    except Exception as e:
+        print(f"\n  ❌ 无法连接 Morningstar API: {e}")
+        print(f"     可能原因：API_BASE 中的会话标识 klr5zyak8x 已失效。")
+        print(f"     解决方法：用浏览器访问 morningstar.com 筛选器页面，")
+        print(f"              从浏览器开发者工具 > Network 中提取新的会话标识，")
+        print(f"              替换 API_BASE 中的 klr5zyak8x。")
+        return
     total = data.get("total", 0)
     all_rows = data.get("rows", [])
     total_pages = (total + PAGE_SIZE - 1) // PAGE_SIZE

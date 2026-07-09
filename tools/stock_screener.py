@@ -19,9 +19,9 @@ stock_screener.py — 动量发现 + 价值验证 选股筛
 
 import json
 import os
-import subprocess
 import sys
 import time
+import urllib.request
 from datetime import datetime, timedelta
 from collections import OrderedDict
 
@@ -56,13 +56,12 @@ def fetch_prices_curl(ticker, days=120):
     )
     for attempt in range(3):
         try:
-            result = subprocess.run(
-                ["curl", "-s", "-H", "User-Agent: Mozilla/5.0", url],
-                capture_output=True, text=True, timeout=15
+            req = urllib.request.Request(
+                url,
+                headers={"User-Agent": "Mozilla/5.0"},
             )
-            if result.returncode != 0:
-                raise ConnectionError(f"curl returncode={result.returncode}")
-            data = json.loads(result.stdout)
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                data = json.loads(resp.read().decode())
             chart = data.get("chart", {}).get("result", [{}])[0]
             timestamps = chart.get("timestamp", [])
             quote = chart.get("indicators", {}).get("quote", [{}])[0]

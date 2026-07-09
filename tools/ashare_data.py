@@ -2,7 +2,7 @@
 """A股数据工具 — 腾讯行情 + 东方财富搜索/财务，零外部依赖（仅 stdlib）。
 
 为 Claude Code Skills 提供 A 股实时行情、财务数据等数据。
-设计原则：独立模块，不影响现有工具；使用 curl 直连绕过系统代理。
+设计原则：独立模块，不影响现有工具；使用 urllib 直连绕过系统代理。
 
 用法（由 Skills 自动调用）：
     python3.11 tools/ashare_data.py quote 600519                    # 实时行情
@@ -16,31 +16,32 @@
 import argparse
 import json
 import os
-import subprocess
 import sys
 import time
+import urllib.request
 from decimal import Decimal, ROUND_HALF_EVEN
+from urllib.parse import urlencode
 
 _TIMEOUT = 15
 
 
 def _curl(url):
-    """用 curl --noproxy 直连，绕过系统代理。带 3 次重试 + 指数退避。"""
+    """用 urllib 直连，绕过系统代理。带 3 次重试 + 指数退避。"""
     for attempt in range(3):
         try:
-            result = subprocess.run(
-                ["/usr/bin/curl", "-s", "--noproxy", "*",
-                 "-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
-                 url],
-                capture_output=True, timeout=_TIMEOUT,
+            proxy_handler = urllib.request.ProxyHandler({})
+            opener = urllib.request.build_opener(proxy_handler)
+            req = urllib.request.Request(
+                url,
+                headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"},
             )
-            if result.returncode != 0 or not result.stdout.strip():
-                raise ConnectionError(f"请求失败: returncode={result.returncode}, url={url}")
+            with opener.open(req, timeout=_TIMEOUT) as resp:
+                raw = resp.read()
             # 腾讯行情 API 返回 GBK 编码，其他返回 UTF-8
             try:
-                return result.stdout.decode("utf-8")
+                return raw.decode("utf-8")
             except UnicodeDecodeError:
-                return result.stdout.decode("gbk")
+                return raw.decode("gbk")
         except Exception as e:
             if attempt < 2:
                 wait = 2 ** attempt

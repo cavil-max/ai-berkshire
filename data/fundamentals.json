@@ -9,7 +9,12 @@
       "2024-05-22": {"label": "FY25Q1(Apr24)", "rev_yoy": 262.0, "gm": 78.4, "eps_beat": 9.0},
       "2024-08-28": {"label": "FY25Q2(Jul24)", "rev_yoy": 122.0, "gm": 75.1, "eps_beat": 5.6},
       "2024-11-20": {"label": "FY25Q3(Oct24)", "rev_yoy": 94.0, "gm": 74.6, "eps_beat": 8.0},
-      "2025-02-26": {"label": "FY25Q4(Jan25)", "rev_yoy": 78.0, "gm": 73.0, "eps_beat": 4.0}
+      "2025-02-26": {"label": "FY25Q4(Jan25)", "rev_yoy": 78.0, "gm": 73.0, "eps_beat": 4.0},
+      "2025-05-28": {"label": "FY26Q1(Apr25)", "rev_yoy": 69.2, "gm": 60.5, "eps_beat": 8.0},
+      "2025-08-27": {"label": "FY26Q2(Jul25)", "rev_yoy": 55.6, "gm": 72.4, "eps_beat": 4.0},
+      "2025-11-19": {"label": "FY26Q3(Oct25)", "rev_yoy": 62.5, "gm": 73.4, "eps_beat": 3.6},
+      "2026-02-25": {"label": "FY26Q4(Jan26)", "rev_yoy": 73.2, "gm": 75.0, "eps_beat": 5.2},
+      "2026-05-20": {"label": "FY27Q1(Apr26)", "rev_yoy": 85.2, "gm": 74.9, "eps_beat": 5.4}
     }
   },
   "AMD": {
@@ -19,7 +24,12 @@
       "2024-04-30": {"label": "Q1 2024", "rev_yoy": 2.0, "gm": 47.0, "eps_beat": 3.3},
       "2024-07-30": {"label": "Q2 2024", "rev_yoy": 9.0, "gm": 49.0, "eps_beat": 1.5},
       "2024-10-29": {"label": "Q3 2024", "rev_yoy": 18.0, "gm": 50.0, "eps_beat": 4.5},
-      "2025-02-04": {"label": "Q4 2024", "rev_yoy": 24.0, "gm": 51.0, "eps_beat": 3.0}
+      "2025-02-04": {"label": "Q4 2024", "rev_yoy": 24.0, "gm": 51.0, "eps_beat": 3.0},
+      "2025-05-06": {"label": "Q1 2025", "rev_yoy": 35.9, "gm": 50.0, "eps_beat": 2.8},
+      "2025-08-05": {"label": "Q2 2025", "rev_yoy": 31.7, "gm": 40.0, "eps_beat": -0.5},
+      "2025-11-04": {"label": "Q3 2025", "rev_yoy": 35.6, "gm": 52.0, "eps_beat": 2.4},
+      "2026-02-03": {"label": "Q4 2025", "rev_yoy": 34.1, "gm": 54.0, "eps_beat": 16.0},
+      "2026-05-05": {"label": "Q1 2026", "rev_yoy": 37.8, "gm": 53.0, "eps_beat": 5.9}
     }
   },
   "MU": {
@@ -29,7 +39,13 @@
       "2024-03-20": {"label": "FY24Q2(Feb24)", "rev_yoy": 58.0, "gm": 28.0, "eps_beat": 82.0},
       "2024-06-26": {"label": "FY24Q3(May24)", "rev_yoy": 82.0, "gm": 35.4, "eps_beat": 6.9},
       "2024-09-25": {"label": "FY24Q4(Aug24)", "rev_yoy": 93.0, "gm": 36.5, "eps_beat": 5.4},
-      "2025-01-08": {"label": "FY25Q1(Nov24)", "rev_yoy": 84.0, "gm": 38.4, "eps_beat": 3.0}
+      "2025-01-08": {"label": "FY25Q1(Nov24)", "rev_yoy": 84.0, "gm": 38.4, "eps_beat": 3.0},
+      "2025-03-20": {"label": "FY25Q2(Feb25)", "rev_yoy": 38.3, "gm": 36.8, "eps_beat": 21.9},
+      "2025-06-25": {"label": "FY25Q3(May25)", "rev_yoy": 36.6, "gm": 37.7, "eps_beat": 31.7},
+      "2025-09-23": {"label": "FY25Q4(Aug25)", "rev_yoy": 46.0, "gm": 44.7, "eps_beat": 12.6},
+      "2025-12-17": {"label": "FY26Q1(Nov25)", "rev_yoy": 56.7, "gm": 56.0, "eps_beat": 21.3},
+      "2026-03-18": {"label": "FY26Q2(Feb26)", "rev_yoy": 196.3, "gm": 74.4, "eps_beat": 31.0},
+      "2026-06-24": {"label": "FY26Q3(May26)", "rev_yoy": 345.7, "gm": 84.6, "eps_beat": 23.8}
     }
   }
 }
