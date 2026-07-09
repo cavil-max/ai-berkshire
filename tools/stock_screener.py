@@ -21,6 +21,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from datetime import datetime, timedelta
 from collections import OrderedDict
 
@@ -46,35 +47,42 @@ DEFAULT_WATCHLIST = {
 # ============================================================
 
 def fetch_prices_curl(ticker, days=120):
-    """用curl获取Yahoo Finance日线数据"""
+    """用curl获取Yahoo Finance日线数据，带 3 次重试 + 指数退避。"""
     end_ts = int(datetime.now().timestamp())
     start_ts = int((datetime.now() - timedelta(days=days)).timestamp())
     url = (
         f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
         f"?period1={start_ts}&period2={end_ts}&interval=1d"
     )
-    try:
-        result = subprocess.run(
-            ["curl", "-s", "-H", "User-Agent: Mozilla/5.0", url],
-            capture_output=True, text=True, timeout=15
-        )
-        if result.returncode != 0:
-            return None
-        data = json.loads(result.stdout)
-        chart = data.get("chart", {}).get("result", [{}])[0]
-        timestamps = chart.get("timestamp", [])
-        quote = chart.get("indicators", {}).get("quote", [{}])[0]
-        rows = []
-        for i, ts in enumerate(timestamps):
-            c = quote.get("close", [None] * len(timestamps))[i]
-            v = quote.get("volume", [None] * len(timestamps))[i]
-            h = quote.get("high", [None] * len(timestamps))[i]
-            if c and v and h:
-                dt = datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
-                rows.append({"date": dt, "close": c, "high": h, "volume": v})
-        return rows if len(rows) > 60 else None
-    except Exception as e:
-        return None
+    for attempt in range(3):
+        try:
+            result = subprocess.run(
+                ["curl", "-s", "-H", "User-Agent: Mozilla/5.0", url],
+                capture_output=True, text=True, timeout=15
+            )
+            if result.returncode != 0:
+                raise ConnectionError(f"curl returncode={result.returncode}")
+            data = json.loads(result.stdout)
+            chart = data.get("chart", {}).get("result", [{}])[0]
+            timestamps = chart.get("timestamp", [])
+            quote = chart.get("indicators", {}).get("quote", [{}])[0]
+            rows = []
+            for i, ts in enumerate(timestamps):
+                c = quote.get("close", [None] * len(timestamps))[i]
+                v = quote.get("volume", [None] * len(timestamps))[i]
+                h = quote.get("high", [None] * len(timestamps))[i]
+                if c and v and h:
+                    dt = datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
+                    rows.append({"date": dt, "close": c, "high": h, "volume": v})
+            return rows if len(rows) > 60 else None
+        except Exception as e:
+            if attempt < 2:
+                wait = 2 ** attempt
+                print(f"  [WARN] {ticker} 价格获取失败({attempt + 1}/3)，{wait}s 后重试: {e}")
+                time.sleep(wait)
+            else:
+                print(f"  [WARN] {ticker} 价格获取失败，已重试 3 次仍失败: {e}")
+                return None
 
 
 # ============================================================
@@ -372,6 +380,7 @@ def main():
                 buy_signals.append(result)
             elif result["grade"] == "WATCH":
                 watch_signals.append(result)
+        time.sleep(1)  # Yahoo Finance 限流保护
 
     # 汇总
     print(f"\n{'='*70}")

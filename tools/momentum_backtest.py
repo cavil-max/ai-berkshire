@@ -8,6 +8,7 @@
 
 import json
 import sys
+import time
 from datetime import datetime, timedelta
 from urllib.request import urlopen, Request
 from collections import OrderedDict
@@ -17,34 +18,40 @@ from collections import OrderedDict
 # ============================================================
 
 def fetch_price_data(ticker, start_date="2021-06-01", end_date="2025-12-31"):
-    """通过Yahoo Finance API获取日线数据"""
+    """通过Yahoo Finance API获取日线数据，带 3 次重试 + 指数退避。"""
     start_ts = int(datetime.strptime(start_date, "%Y-%m-%d").timestamp())
     end_ts = int(datetime.strptime(end_date, "%Y-%m-%d").timestamp())
     url = (
         f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
         f"?period1={start_ts}&period2={end_ts}&interval=1d"
     )
-    req = Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    try:
-        resp = urlopen(req, timeout=15)
-        data = json.loads(resp.read().decode())
-        result = data["chart"]["result"][0]
-        timestamps = result["timestamp"]
-        quote = result["indicators"]["quote"][0]
-        rows = []
-        for i, ts in enumerate(timestamps):
-            dt = datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
-            c = quote["close"][i]
-            v = quote["volume"][i]
-            o = quote["open"][i]
-            h = quote["high"][i]
-            l = quote["low"][i]
-            if c and v:
-                rows.append({"date": dt, "open": o, "high": h, "low": l, "close": c, "volume": v})
-        return rows
-    except Exception as e:
-        print(f"  [WARN] 无法获取 {ticker} 价格数据: {e}")
-        return None
+    for attempt in range(3):
+        try:
+            req = Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            resp = urlopen(req, timeout=15)
+            data = json.loads(resp.read().decode())
+            result = data["chart"]["result"][0]
+            timestamps = result["timestamp"]
+            quote = result["indicators"]["quote"][0]
+            rows = []
+            for i, ts in enumerate(timestamps):
+                dt = datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
+                c = quote["close"][i]
+                v = quote["volume"][i]
+                o = quote["open"][i]
+                h = quote["high"][i]
+                l = quote["low"][i]
+                if c and v:
+                    rows.append({"date": dt, "open": o, "high": h, "low": l, "close": c, "volume": v})
+            return rows
+        except Exception as e:
+            if attempt < 2:
+                wait = 2 ** attempt
+                print(f"  [WARN] {ticker} 价格获取失败({attempt + 1}/3)，{wait}s 后重试: {e}")
+                time.sleep(wait)
+            else:
+                print(f"  [WARN] 无法获取 {ticker} 价格数据，已重试 3 次仍失败: {e}")
+                return None
 
 
 # ============================================================
@@ -339,6 +346,7 @@ if __name__ == "__main__":
         result = backtest_ticker(ticker)
         if result:
             results[ticker] = result
+        time.sleep(1)  # Yahoo Finance 限流保护
 
     # 总结
     print(f"\n\n{'='*70}")

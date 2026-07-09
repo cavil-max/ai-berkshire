@@ -18,26 +18,36 @@ import json
 import os
 import subprocess
 import sys
+import time
 from decimal import Decimal, ROUND_HALF_EVEN
 
 _TIMEOUT = 15
 
 
 def _curl(url):
-    """用 curl --noproxy 直连，绕过系统代理。"""
-    result = subprocess.run(
-        ["/usr/bin/curl", "-s", "--noproxy", "*",
-         "-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
-         url],
-        capture_output=True, timeout=_TIMEOUT,
-    )
-    if result.returncode != 0 or not result.stdout.strip():
-        raise ConnectionError(f"请求失败: {url}")
-    # 腾讯行情 API 返回 GBK 编码，其他返回 UTF-8
-    try:
-        return result.stdout.decode("utf-8")
-    except UnicodeDecodeError:
-        return result.stdout.decode("gbk")
+    """用 curl --noproxy 直连，绕过系统代理。带 3 次重试 + 指数退避。"""
+    for attempt in range(3):
+        try:
+            result = subprocess.run(
+                ["/usr/bin/curl", "-s", "--noproxy", "*",
+                 "-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+                 url],
+                capture_output=True, timeout=_TIMEOUT,
+            )
+            if result.returncode != 0 or not result.stdout.strip():
+                raise ConnectionError(f"请求失败: returncode={result.returncode}, url={url}")
+            # 腾讯行情 API 返回 GBK 编码，其他返回 UTF-8
+            try:
+                return result.stdout.decode("utf-8")
+            except UnicodeDecodeError:
+                return result.stdout.decode("gbk")
+        except Exception as e:
+            if attempt < 2:
+                wait = 2 ** attempt
+                print(f"  [WARN] 请求失败({attempt + 1}/3)，{wait}s 后重试: {e}", file=sys.stderr)
+                time.sleep(wait)
+            else:
+                raise
 
 
 def _curl_json(url, params=None):
@@ -219,8 +229,8 @@ def cmd_financials(code: str):
     try:
         data = _curl_json(fin_url, params)
         reports = data.get("result", {}).get("data", [])
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"  [WARN] 财务数据获取失败(年报): {e}", file=sys.stderr)
 
     # 如果年报筛选无结果，去掉年报限制
     if not reports:
@@ -228,8 +238,8 @@ def cmd_financials(code: str):
         try:
             data = _curl_json(fin_url, params)
             reports = data.get("result", {}).get("data", [])
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"  [WARN] 财务数据获取失败(全部): {e}", file=sys.stderr)
 
     print("=" * 60)
     print(f"核心财务数据: {name} ({code_clean})")
@@ -270,12 +280,9 @@ def cmd_financials(code: str):
 def cmd_search(keyword: str):
     """搜索股票代码。"""
     url = "https://searchadapter.eastmoney.com/api/suggest/get"
-    # Use env var or fall back to the public eastmoney search token
-    token = os.environ.get("EASTMONEY_SEARCH_TOKEN") or "D43BF722C8E33BDC906FB84D85E326E8"
     params = {
         "input": keyword,
         "type": "14",
-        "token": token,
         "count": "10",
     }
     data = _curl_json(url, params)

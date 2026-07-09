@@ -30,11 +30,22 @@ OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "dat
 
 def fetch_page(page: int) -> dict:
     url = API_BASE.format(page=page, page_size=PAGE_SIZE)
-    result = subprocess.run(
-        ["curl", "-s", "-H", "User-Agent: Mozilla/5.0", url],
-        capture_output=True, text=True, timeout=30,
-    )
-    return json.loads(result.stdout)
+    for attempt in range(3):
+        try:
+            result = subprocess.run(
+                ["curl", "-s", "-H", "User-Agent: Mozilla/5.0", url],
+                capture_output=True, text=True, timeout=30,
+            )
+            if result.returncode != 0 or not result.stdout.strip():
+                raise ConnectionError(f"curl returncode={result.returncode}, empty response")
+            return json.loads(result.stdout)
+        except Exception as e:
+            if attempt < 2:
+                wait = 2 ** attempt
+                print(f"  [WARN] 第 {page} 页获取失败({attempt + 1}/3)，{wait}s 后重试: {e}")
+                time.sleep(wait)
+            else:
+                raise
 
 
 def extract_ticker(tenforeid: str) -> str:
