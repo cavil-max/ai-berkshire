@@ -2,7 +2,7 @@
 """A股数据工具 — 基于 AKShare 的行情、财务、搜索工具。
 
 为 Skills 提供 A 股实时行情、财务数据等数据。
-使用 AKShare 封装东方财富/腾讯数据源。
+使用 AKShare 封装新浪/东方财富数据源，优先新浪（更稳定），东方财富作为 fallback。
 
 用法（由 Skills 自动调用）：
     python3 tools/ashare_data.py quote 600519                    # 实时行情
@@ -34,103 +34,282 @@ def _fmt_pct(value) -> str:
         return str(value)
 
 
+def _fmt_yi(value) -> str:
+    """格式化为亿元。"""
+    if value is None or pd.isna(value):
+        return "-"
+    try:
+        return f"{float(value) / 1e8:.2f}亿"
+    except (ValueError, TypeError):
+        return "-"
+
+
+def _to_sina_symbol(code: str) -> str:
+    """转为新浪格式：sh600519 / sz000001。"""
+    code = code.strip().replace(".SH", "").replace(".SZ", "").replace(".BJ", "")
+    if code.startswith(("6", "9", "5")):
+        return f"sh{code}"
+    return f"sz{code}"
+
+
 # ---------------------------------------------------------------------------
-# 命令实现
+# 实时行情（Sina 主，EastMoney fallback）
 # ---------------------------------------------------------------------------
+
+
+def _quote_sina(code: str) -> dict | None:
+    """从新浪获取实时行情。"""
+    sina_sym = _to_sina_symbol(code)
+    df = ak.stock_zh_a_spot()
+    row = df[df["代码"] == sina_sym]
+    if row.empty:
+        return None
+    s = row.iloc[0]
+    return {
+        "name": s["名称"],
+        "price": s["最新价"],
+        "change_pct": s["涨跌幅"],
+        "change": s["涨跌额"],
+        "open": s["今开"],
+        "high": s["最高"],
+        "low": s["最低"],
+        "prev_close": s["昨收"],
+        "volume": s["成交量"],
+        "amount": s["成交额"],
+    }
+
+
+def _quote_em(code: str) -> dict | None:
+    """从东方财富获取实时行情（含 PE/PB/市值）。"""
+    df = ak.stock_zh_a_spot_em()
+    row = df[df["代码"] == code]
+    if row.empty:
+        return None
+    s = row.iloc[0]
+    return {
+        "name": s["名称"],
+        "price": s["最新价"],
+        "change_pct": s["涨跌幅"],
+        "change": s["涨跌额"],
+        "open": s["今开"],
+        "high": s["最高"],
+        "low": s["最低"],
+        "prev_close": s["昨收"],
+        "volume": s["成交量"],
+        "amount": s["成交额"],
+        "turnover": s.get("换手率"),
+        "pe": s.get("市盈率-动态"),
+        "pb": s.get("市净率"),
+        "market_cap": s.get("总市值"),
+        "circ_market_cap": s.get("流通市值"),
+    }
 
 
 def cmd_quote(code: str):
-    """实时行情。"""
+    """实时行情。优先东方财富（含 PE/PB/市值），失败回退新浪。"""
     code = code.strip().replace(".SH", "").replace(".SZ", "").replace(".BJ", "")
-    df = ak.stock_zh_a_spot_em()
-    row = df[df["代码"] == code]
-    if row.empty:
+
+    # 优先东方财富（数据更全）
+    try:
+        data = _quote_em(code)
+        if data:
+            print("=" * 60)
+            print(f"实时行情: {data['name']} ({code})")
+            print("=" * 60)
+            print(f"  当前价:     {data['price']}")
+            print(f"  涨跌幅:     {data['change_pct']}%")
+            print(f"  涨跌额:     {data['change']}")
+            print(f"  今开:       {data['open']}")
+            print(f"  最高:       {data['high']}")
+            print(f"  最低:       {data['low']}")
+            print(f"  昨收:       {data['prev_close']}")
+            print(f"  成交量:     {data['volume']} 手")
+            print(f"  成交额:     {float(data['amount']) / 1e8:.2f} 亿")
+            if data.get("turnover") is not None:
+                print(f"  换手率:     {data['turnover']}%")
+            if data.get("pe") is not None:
+                print(f"  PE(动):     {data['pe']}")
+            if data.get("pb") is not None:
+                print(f"  PB:         {data['pb']}")
+            if data.get("market_cap") is not None:
+                print(f"  总市值:     {float(data['market_cap']) / 1e8:.2f} 亿")
+            if data.get("circ_market_cap") is not None:
+                print(f"  流通市值:   {float(data['circ_market_cap']) / 1e8:.2f} 亿")
+            return
+    except Exception:
+        pass  # 东方财富不可用，回退新浪
+
+    # 回退新浪
+    try:
+        data = _quote_sina(code)
+    except Exception as e:
+        print(f"❌ 行情获取失败: {e}")
+        return
+
+    if not data:
         print(f"❌ 未找到股票代码 {code}")
         return
-    s = row.iloc[0]
+
     print("=" * 60)
-    print(f"实时行情: {s['名称']} ({code})")
+    print(f"实时行情: {data['name']} ({code}) [新浪]")
     print("=" * 60)
-    print(f"  当前价:     {s['最新价']}")
-    print(f"  涨跌幅:     {s['涨跌幅']}%")
-    print(f"  涨跌额:     {s['涨跌额']}")
-    print(f"  今开:       {s['今开']}")
-    print(f"  最高:       {s['最高']}")
-    print(f"  最低:       {s['最低']}")
-    print(f"  昨收:       {s['昨收']}")
-    print(f"  成交量:     {s['成交量']} 手")
-    print(f"  成交额:     {s['成交额'] / 1e8:.2f} 亿")
-    print(f"  换手率:     {s['换手率']}%")
-    print(f"  PE(动):     {s['市盈率-动态']}")
-    print(f"  PB:         {s['市净率']}")
-    print(f"  总市值:     {s['总市值'] / 1e8:.2f} 亿")
-    print(f"  流通市值:   {s['流通市值'] / 1e8:.2f} 亿")
+    print(f"  当前价:     {data['price']}")
+    print(f"  涨跌幅:     {data['change_pct']}%")
+    print(f"  涨跌额:     {data['change']}")
+    print(f"  今开:       {data['open']}")
+    print(f"  最高:       {data['high']}")
+    print(f"  最低:       {data['low']}")
+    print(f"  昨收:       {data['prev_close']}")
+    print(f"  成交量:     {data['volume']} 手")
+    print(f"  成交额:     {float(data['amount']) / 1e8:.2f} 亿")
+    print(f"  (PE/PB/市值需用 valuation 命令获取)")
+
+
+# ---------------------------------------------------------------------------
+# 估值指标（东方财富主，Sina fallback 无 PE/PB）
+# ---------------------------------------------------------------------------
 
 
 def cmd_valuation(code: str):
-    """估值指标。"""
+    """估值指标。优先东方财富，失败时用新浪行情+计算。"""
     code = code.strip().replace(".SH", "").replace(".SZ", "").replace(".BJ", "")
-    df = ak.stock_zh_a_spot_em()
-    row = df[df["代码"] == code]
-    if row.empty:
-        print(f"❌ 未找到股票代码 {code}")
-        return
-    s = row.iloc[0]
-    print("=" * 60)
-    print(f"估值指标: {s['名称']} ({code})")
-    print("=" * 60)
-    print(f"  PE(动态):   {s['市盈率-动态']}")
-    print(f"  PB:         {s['市净率']}")
-    print(f"  总市值:     {s['总市值'] / 1e8:.2f} 亿")
-    print(f"  流通市值:   {s['流通市值'] / 1e8:.2f} 亿")
+
+    try:
+        data = _quote_em(code)
+        if data and data.get("pe") is not None:
+            print("=" * 60)
+            print(f"估值指标: {data['name']} ({code})")
+            print("=" * 60)
+            print(f"  PE(动态):   {data['pe']}")
+            print(f"  PB:         {data['pb']}")
+            print(f"  总市值:     {float(data['market_cap']) / 1e8:.2f} 亿")
+            print(f"  流通市值:   {float(data['circ_market_cap']) / 1e8:.2f} 亿")
+            return
+    except Exception:
+        pass
+
+    # 东方财富不可用
+    print(f"⚠️ 东方财富数据不可用，无法获取 {code} 的估值指标（PE/PB/市值）。")
+    print(f"   可用 quote 命令获取基本行情，或通过 WebSearch 补充估值数据。")
 
 
-def cmd_financials(code: str):
-    """近5年核心财务数据。"""
+# ---------------------------------------------------------------------------
+# 财务数据（Sina 主，EastMoney fallback）
+# ---------------------------------------------------------------------------
+
+
+def _financials_sina(code: str) -> list[dict] | None:
+    """从新浪获取利润表数据。"""
+    sina_sym = _to_sina_symbol(code)
+    try:
+        df = ak.stock_financial_report_sina(stock=sina_sym, symbol="利润表")
+        if df is None or df.empty:
+            return None
+        # 筛选年报（报告日以 12-31 结尾）
+        df = df[df["报告日"].str.endswith("12-31", na=False)]
+        results = []
+        for _, row in df.head(5).iterrows():
+            results.append({
+                "date": str(row.get("报告日", "")),
+                "revenue": row.get("一、营业总收入") or row.get("营业总收入"),
+                "net_profit": row.get("净利润"),
+            })
+        return results
+    except Exception:
+        return None
+
+
+def _financials_em(code: str) -> list[dict] | None:
+    """从东方财富获取财务指标。"""
     code_clean = code.strip().replace(".SH", "").replace(".SZ", "").replace(".BJ", "")
     market = "SH" if code_clean.startswith(("6", "9", "5")) else "SZ"
     symbol = f"{code_clean}.{market}"
+    try:
+        df = ak.stock_financial_analysis_indicator_em(symbol=symbol, indicator="按报告期")
+        if df is None or df.empty:
+            return None
+        annual = df[df["REPORT_DATE_NAME"].str.contains("年年报", na=False)]
+        if annual.empty:
+            annual = df
+        results = []
+        for _, row in annual.head(5).iterrows():
+            results.append({
+                "date": str(row.get("REPORT_DATE", ""))[:10],
+                "report_name": row.get("REPORT_DATE_NAME", ""),
+                "revenue": row.get("TOTALOPERATEREVE"),
+                "rev_growth": row.get("TOTALOPERATEREVETZ"),
+                "net_profit": row.get("PARENTNETPROFIT"),
+                "profit_growth": row.get("PARENTNETPROFITTZ"),
+                "eps": row.get("EPSJB"),
+                "bps": row.get("BPS"),
+                "roe": row.get("ROEJQ"),
+            })
+        return results
+    except Exception:
+        return None
 
-    df = ak.stock_financial_analysis_indicator_em(symbol=symbol, indicator="按报告期")
-    if df is None or df.empty:
+
+def cmd_financials(code: str):
+    """近5年核心财务数据。优先东方财富（数据更全），失败回退新浪。"""
+    code_clean = code.strip().replace(".SH", "").replace(".SZ", "").replace(".BJ", "")
+
+    # 优先东方财富
+    data = _financials_em(code_clean)
+    if data:
+        # 获取名称
+        name = code_clean
+        try:
+            spot = _quote_em(code_clean)
+            if spot:
+                name = spot["name"]
+        except Exception:
+            pass
+
+        print("=" * 60)
+        print(f"核心财务数据: {name} ({code_clean})")
+        print("=" * 60)
+        for row in data:
+            print(f"\n  --- {row['date']} {row.get('report_name', '')} ---")
+            print(f"  营收:           {_fmt_yi(row.get('revenue'))}")
+            print(f"  营收增速:       {_fmt_pct(row.get('rev_growth'))}")
+            print(f"  归母净利润:     {_fmt_yi(row.get('net_profit'))}")
+            print(f"  净利润增速:     {_fmt_pct(row.get('profit_growth'))}")
+            eps = row.get("eps")
+            print(f"  基本每股收益:   {eps}" if eps is not None else "  基本每股收益:   -")
+            bps = row.get("bps")
+            print(f"  每股净资产:     {bps:.2f}" if bps is not None else "  每股净资产:     -")
+            print(f"  ROE(加权):      {_fmt_pct(row.get('roe'))}")
+        return
+
+    # 回退新浪
+    print("  [INFO] 东方财富不可用，使用新浪数据源...")
+    data = _financials_sina(code_clean)
+    if not data:
         print(f"❌ 未获取到 {code_clean} 的财务数据")
         return
 
-    # 筛选年报
-    annual = df[df["REPORT_DATE_NAME"].str.contains("年年报", na=False)]
-    if annual.empty:
-        annual = df  # 如果没有年报，用全部数据
-
-    # 取近5年
-    recent = annual.head(5)
-
     # 获取名称
-    spot_df = ak.stock_zh_a_spot_em()
-    name_row = spot_df[spot_df["代码"] == code_clean]
-    name = name_row.iloc[0]["名称"] if not name_row.empty else code_clean
+    name = code_clean
+    try:
+        spot = _quote_sina(code_clean)
+        if spot:
+            name = spot["name"]
+    except Exception:
+        pass
 
     print("=" * 60)
-    print(f"核心财务数据: {name} ({code_clean})")
+    print(f"核心财务数据: {name} ({code_clean}) [新浪]")
     print("=" * 60)
+    for row in data:
+        print(f"\n  --- {row['date']} ---")
+        print(f"  营业总收入:     {_fmt_yi(row.get('revenue'))}")
+        print(f"  净利润:         {_fmt_yi(row.get('net_profit'))}")
+    print("\n  ⚠️ 新浪数据源仅提供营收和净利润，完整指标需东方财富数据源。")
 
-    for _, row in recent.iterrows():
-        date = str(row.get("REPORT_DATE", ""))[:10]
-        report_name = row.get("REPORT_DATE_NAME", "")
-        print(f"\n  --- {date} {report_name} ---")
-        rev = row.get("TOTALOPERATEREVE")
-        print(f"  营收:           {rev / 1e8:.2f}亿" if pd.notna(rev) else "  营收:           -")
-        rev_g = row.get("TOTALOPERATEREVETZ")
-        print(f"  营收增速:       {_fmt_pct(rev_g)}" if pd.notna(rev_g) else "  营收增速:       -")
-        profit = row.get("PARENTNETPROFIT")
-        print(f"  归母净利润:     {profit / 1e8:.2f}亿" if pd.notna(profit) else "  归母净利润:     -")
-        profit_g = row.get("PARENTNETPROFITTZ")
-        print(f"  净利润增速:     {_fmt_pct(profit_g)}" if pd.notna(profit_g) else "  净利润增速:     -")
-        eps = row.get("EPSJB")
-        print(f"  基本每股收益:   {eps}" if pd.notna(eps) else "  基本每股收益:   -")
-        bps = row.get("BPS")
-        print(f"  每股净资产:     {bps:.2f}" if pd.notna(bps) else "  每股净资产:     -")
-        roe = row.get("ROEJQ")
-        print(f"  ROE(加权):      {_fmt_pct(roe)}" if pd.notna(roe) else "  ROE(加权):      -")
+
+# ---------------------------------------------------------------------------
+# 股票搜索
+# ---------------------------------------------------------------------------
 
 
 def cmd_search(keyword: str):
