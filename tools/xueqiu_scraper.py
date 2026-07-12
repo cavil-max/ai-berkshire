@@ -3,6 +3,10 @@
 """
 雪球通用爬虫：遍历指定用户的完整时间线，按关键词筛选本人原发言。
 
+⚠️  合规提示：本工具通过自动化方式访问雪球，可能违反雪球用户协议（ToS）。
+    仅用于个人学习与研究，不要用于商业用途或大规模数据采集。
+    如雪球加强反爬措施导致工具失效，应停止使用而非绕过。
+
 特性：
   - Playwright 登录态复用：首次 headful 手动登录，state 持久化到本地
   - 双通道 fetch：优先页面内 JS fetch，失败回退 context.request（APIRequestContext）
@@ -23,9 +27,9 @@
       --output ../reports/拼多多/段永平雪球发言-PDD相关.md
 
   # 其他用户 + 其他关键词
-  python3 xueqiu_scraper.py --user-id 6784593966 --keywords 茅台 --output /tmp/out.md
+  python3 xueqiu_scraper.py --user-id 6784593966 --keywords 茅台 --output ../reports/茅台/雪球发言-茅台相关.md
 
-登录态缓存默认 /tmp/xueqiu_state.json，可用 --state-path 覆盖。
+登录态缓存默认 data/xueqiu_state.json，可用 --state-path 覆盖。
 """
 
 import argparse
@@ -37,6 +41,9 @@ import re
 from datetime import datetime
 from pathlib import Path
 from playwright.async_api import async_playwright
+
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
+DEFAULT_STATE_PATH = os.path.join(DATA_DIR, "xueqiu_state.json")
 
 
 def is_match(text, keywords):
@@ -356,8 +363,8 @@ def parse_args():
                     help='关键词列表，逗号分隔。例：拼多多,PDD,黄峥,Temu')
     ap.add_argument('--output', type=str, default='', help='markdown 输出路径')
     ap.add_argument('--raw-json', type=str, default='', help='（可选）命中条目原始 JSON 输出路径')
-    ap.add_argument('--state-path', type=str, default='/tmp/xueqiu_state.json',
-                    help='登录态缓存文件（默认 /tmp/xueqiu_state.json）')
+    ap.add_argument('--state-path', type=str, default=DEFAULT_STATE_PATH,
+                    help=f'登录态缓存文件（默认 {DEFAULT_STATE_PATH}）')
     ap.add_argument('--dump-all', type=str, default='',
                     help='全量缓存路径：爬取时同时把该用户所有原发言写到这里，用于后续离线多主题分析')
     ap.add_argument('--from-cache', type=str, default='',
@@ -399,7 +406,7 @@ async def main():
         return
 
     progress_path = args.state_path + f'.progress.{args.user_id}'
-    raw_json = args.raw_json or f'/tmp/xueqiu_{args.user_id}_raw.json'
+    raw_json = args.raw_json or os.path.join(DATA_DIR, f'xueqiu_{args.user_id}_raw.json')
 
     print("=" * 60)
     print(f"雪球爬虫 | user_id={args.user_id} | keywords={keywords} | dump_all={args.dump_all}")

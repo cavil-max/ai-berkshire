@@ -110,6 +110,9 @@ This skill is generated from `skills/news-pulse.md` so Claude Code and Codex use
      - 段永平 user_id: `1247347556`
      - 命令示例：`python3 tools/xueqiu_scraper.py --user-id 1247347556 --keywords {公司名},{股票代码} --output /tmp/dyp-{公司名}.md`
      - 仅在该公司是段永平/李录关注标的时调用，否则跳过节省时间
+     - **降级方案**：如果 Playwright 未安装或登录态过期，改用 `WebSearch` 搜索：
+       `WebSearch "段永平 雪球 {公司名}"` 和 `WebSearch "{公司名} 雪球 讨论"`
+       虽然无法全量遍历历史发言，但能获取搜索引擎索引到的近期热门讨论。
   5. **传言与小作文**：媒体未证实的传言、社交媒体讨论热点（雪球/X/Reddit）
   6. **技术面信号**：是否触及关键支撑/阻力、是否有大宗交易、融资融券异常
   7. 关键判断：**是基本面驱动还是情绪/资金面驱动？**
