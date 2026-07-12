@@ -29,7 +29,10 @@ GitHub 操作等）见 `CLAUDE.md`；本文件聚焦 Codex 行为、兼容性与
   生成的 opencode slash commands，用 `$ARGUMENTS` 接收用户输入。
 - `.opencode/skills/*/SKILL.md`：由同一脚本生成的 opencode skills，
   带自动触发描述和 opencode adapter note。
-- `tools/*.py`：四套系统共用的金融校验与数据工具。
+- `tools/*.py`：四套系统共用的金融校验与数据工具。`ashare_data.py` 和
+  `us_fundamentals.py` 需要 pip 依赖（见 `requirements.txt`），其余零依赖。
+- `requirements.txt`：Python 依赖声明（akshare、pandas、edgartools）。
+  安装：`pip install -r requirements.txt`
 - `reports/`：研究产出。改工具或 skill 时不要重写无关报告。
 - `scripts/sync-codex-skills.py`：从 `skills/*.md` 重新生成 Codex skills。
 - `scripts/sync-openclaw-skills.py`：从 `skills/*.md` 重新生成 OpenClaw skills。

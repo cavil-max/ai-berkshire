@@ -98,6 +98,9 @@ reports/{公司名}/
 ## 常用命令
 
 ```bash
+# 安装 Python 依赖（akshare、pandas、edgartools）
+pip install -r requirements.txt
+
 # 推送报告到GitHub
 cd ~/ai-berkshire
 git add reports/xxx.md
@@ -111,6 +114,8 @@ git push origin main
 - 市值必须手算校验：股价 × 总股本，与报告市值对比
 - 货币单位要明确（港币/人民币/美元），防止混淆
 - PE/ROE等指标用 tools/financial_rigor.py 精确计算
+- A股数据用 `python3 tools/ashare_data.py`（需 akshare）
+- 美股基本面用 `python3 tools/us_fundamentals.py`（需 edgartools，SEC EDGAR 官方数据）
 - 报告写完后主动询问是否推送到GitHub
 
 ## OpenClaw 使用

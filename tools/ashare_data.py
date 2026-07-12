@@ -1,126 +1,28 @@
 #!/usr/bin/env python3
-"""A股数据工具 — 腾讯行情 + 东方财富搜索/财务，零外部依赖（仅 stdlib）。
+"""A股数据工具 — 基于 AKShare 的行情、财务、搜索工具。
 
-为 Claude Code Skills 提供 A 股实时行情、财务数据等数据。
-设计原则：独立模块，不影响现有工具；使用 urllib 直连绕过系统代理。
+为 Skills 提供 A 股实时行情、财务数据等数据。
+使用 AKShare 封装东方财富/腾讯数据源。
 
 用法（由 Skills 自动调用）：
-    python3.11 tools/ashare_data.py quote 600519                    # 实时行情
-    python3.11 tools/ashare_data.py financials 600519               # 核心财务数据（近5年）
-    python3.11 tools/ashare_data.py valuation 600519                # 估值指标
-    python3.11 tools/ashare_data.py search 茅台                      # 搜索股票代码
+    python3 tools/ashare_data.py quote 600519                    # 实时行情
+    python3 tools/ashare_data.py financials 600519               # 核心财务数据（近5年）
+    python3 tools/ashare_data.py valuation 600519                # 估值指标
+    python3 tools/ashare_data.py search 茅台                      # 搜索股票代码
 
-需要 Python >= 3.8，零外部依赖。
+需要 Python >= 3.8 + pip install akshare pandas。
 """
 
 import argparse
-import json
 import os
 import sys
-import time
-import urllib.request
-from decimal import Decimal, ROUND_HALF_EVEN
-from urllib.parse import urlencode
 
-_TIMEOUT = 15
+# 清除代理环境变量，避免 AKShare 底层 requests 走代理连不上国内数据源
+for _key in ("http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY"):
+    os.environ.pop(_key, None)
 
-
-def _curl(url):
-    """用 urllib 直连，绕过系统代理。带 3 次重试 + 指数退避。"""
-    for attempt in range(3):
-        try:
-            proxy_handler = urllib.request.ProxyHandler({})
-            opener = urllib.request.build_opener(proxy_handler)
-            req = urllib.request.Request(
-                url,
-                headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"},
-            )
-            with opener.open(req, timeout=_TIMEOUT) as resp:
-                raw = resp.read()
-            # 腾讯行情 API 返回 GBK 编码，其他返回 UTF-8
-            try:
-                return raw.decode("utf-8")
-            except UnicodeDecodeError:
-                return raw.decode("gbk")
-        except Exception as e:
-            if attempt < 2:
-                wait = 2 ** attempt
-                print(f"  [WARN] 请求失败({attempt + 1}/3)，{wait}s 后重试: {e}", file=sys.stderr)
-                time.sleep(wait)
-            else:
-                raise
-
-
-def _curl_json(url, params=None):
-    """curl 获取 JSON。"""
-    if params:
-        from urllib.parse import urlencode
-        url = f"{url}?{urlencode(params)}"
-    return json.loads(_curl(url))
-
-
-# ---------------------------------------------------------------------------
-# 腾讯行情 API（稳定可靠，无需鉴权）
-# ---------------------------------------------------------------------------
-
-def _qq_code(code: str) -> str:
-    """将股票代码转为腾讯行情格式。"""
-    code = code.strip().replace(".SH", "").replace(".SZ", "").replace(".BJ", "")
-    if code.startswith(("6", "9", "5")):
-        return f"sh{code}"
-    elif code.startswith(("0", "3", "2", "1")):
-        return f"sz{code}"
-    elif code.startswith(("4", "8")):
-        return f"bj{code}"
-    return f"sh{code}"
-
-
-def _parse_qq_quote(raw: str) -> dict:
-    """解析腾讯行情数据。格式：v_shXXXXXX="字段1~字段2~..."; """
-    start = raw.find('"')
-    end = raw.rfind('"')
-    if start < 0 or end <= start:
-        return {}
-    fields = raw[start + 1:end].split("~")
-    if len(fields) < 50:
-        return {}
-    return {
-        "name": fields[1],
-        "code": fields[2],
-        "price": fields[3],
-        "prev_close": fields[4],
-        "open": fields[5],
-        "volume": fields[6],         # 手
-        "buy_vol": fields[7],
-        "sell_vol": fields[8],
-        "high": fields[33] if len(fields) > 33 else fields[3],
-        "low": fields[34] if len(fields) > 34 else fields[3],
-        "change_pct": fields[32],
-        "change_amt": fields[31],
-        "turnover_amt": fields[37] if len(fields) > 37 else "-",
-        "turnover_rate": fields[38] if len(fields) > 38 else "-",
-        "pe": fields[39] if len(fields) > 39 else "-",
-        "market_cap": fields[45] if len(fields) > 45 else "-",    # 总市值（亿）
-        "float_cap": fields[44] if len(fields) > 44 else "-",     # 流通市值（亿）
-        "pb": fields[46] if len(fields) > 46 else "-",
-        "high_52w": fields[47] if len(fields) > 47 else "-",
-        "low_52w": fields[48] if len(fields) > 48 else "-",
-        "total_shares": fields[38] if len(fields) > 38 else "-",  # will recalculate
-    }
-
-
-def _fmt_yi(value) -> str:
-    if value is None or value == "-" or value == "":
-        return "-"
-    try:
-        v = float(value)
-    except (ValueError, TypeError):
-        return str(value)
-    if abs(v) >= 1e8:
-        return f"{v / 1e8:.2f}亿"
-    if abs(v) >= 1e4:
-        return f"{v / 1e4:.2f}万"
-    return f"{v:.2f}"
+import akshare as ak
+import pandas as pd
 
 
 def _fmt_pct(value) -> str:
@@ -136,181 +38,128 @@ def _fmt_pct(value) -> str:
 # 命令实现
 # ---------------------------------------------------------------------------
 
-def cmd_quote(code: str):
-    """实时行情快照。"""
-    qq_code = _qq_code(code)
-    raw = _curl(f"https://qt.gtimg.cn/q={qq_code}")
-    d = _parse_qq_quote(raw)
-    if not d:
-        print(f"❌ 未找到股票 {code}")
-        return
 
+def cmd_quote(code: str):
+    """实时行情。"""
+    code = code.strip().replace(".SH", "").replace(".SZ", "").replace(".BJ", "")
+    df = ak.stock_zh_a_spot_em()
+    row = df[df["代码"] == code]
+    if row.empty:
+        print(f"❌ 未找到股票代码 {code}")
+        return
+    s = row.iloc[0]
     print("=" * 60)
-    print(f"实时行情: {d['name']} ({d['code']})")
+    print(f"实时行情: {s['名称']} ({code})")
     print("=" * 60)
-    print(f"  当前价:     {d['price']}")
-    print(f"  涨跌幅:     {d['change_pct']}%")
-    print(f"  涨跌额:     {d['change_amt']}")
-    print(f"  今开:       {d['open']}")
-    print(f"  最高:       {d['high']}")
-    print(f"  最低:       {d['low']}")
-    print(f"  昨收:       {d['prev_close']}")
-    print(f"  成交量:     {d['volume']} 手")
-    print(f"  成交额:     {d['turnover_amt']}万")
-    print(f"  总市值:     {d['market_cap']}亿")
-    print(f"  流通市值:   {d['float_cap']}亿")
-    print(f"  PE(动):     {d['pe']}")
-    print(f"  PB:         {d['pb']}")
-    print(f"  换手率:     {d['turnover_rate']}%")
-    print(f"  52周最高:   {d['high_52w']}")
-    print(f"  52周最低:   {d['low_52w']}")
+    print(f"  当前价:     {s['最新价']}")
+    print(f"  涨跌幅:     {s['涨跌幅']}%")
+    print(f"  涨跌额:     {s['涨跌额']}")
+    print(f"  今开:       {s['今开']}")
+    print(f"  最高:       {s['最高']}")
+    print(f"  最低:       {s['最低']}")
+    print(f"  昨收:       {s['昨收']}")
+    print(f"  成交量:     {s['成交量']} 手")
+    print(f"  成交额:     {s['成交额'] / 1e8:.2f} 亿")
+    print(f"  换手率:     {s['换手率']}%")
+    print(f"  PE(动):     {s['市盈率-动态']}")
+    print(f"  PB:         {s['市净率']}")
+    print(f"  总市值:     {s['总市值'] / 1e8:.2f} 亿")
+    print(f"  流通市值:   {s['流通市值'] / 1e8:.2f} 亿")
 
 
 def cmd_valuation(code: str):
-    """估值指标汇总。"""
-    qq_code = _qq_code(code)
-    raw = _curl(f"https://qt.gtimg.cn/q={qq_code}")
-    d = _parse_qq_quote(raw)
-    if not d:
-        print(f"❌ 未找到股票 {code}")
+    """估值指标。"""
+    code = code.strip().replace(".SH", "").replace(".SZ", "").replace(".BJ", "")
+    df = ak.stock_zh_a_spot_em()
+    row = df[df["代码"] == code]
+    if row.empty:
+        print(f"❌ 未找到股票代码 {code}")
         return
-
-    price = d["price"]
-    market_cap_yi = d["market_cap"]
-
+    s = row.iloc[0]
     print("=" * 60)
-    print(f"估值指标: {d['name']} ({d['code']})")
+    print(f"估值指标: {s['名称']} ({code})")
     print("=" * 60)
-    print(f"  当前价:     {price}")
-    print(f"  总市值:     {market_cap_yi}亿")
-    print(f"  流通市值:   {d['float_cap']}亿")
-    print(f"  PE(动):     {d['pe']}")
-    print(f"  PB:         {d['pb']}")
-    print(f"  52周最高:   {d['high_52w']}")
-    print(f"  52周最低:   {d['low_52w']}")
-
-    # 市值验算
-    try:
-        p = Decimal(price)
-        cap = Decimal(market_cap_yi) * Decimal("1e8")
-        shares = cap / p
-        print(f"\n  推算总股本: {_fmt_yi(float(shares))}股")
-        calc_cap = p * shares
-        reported_cap = Decimal(market_cap_yi) * Decimal("1e8")
-        diff = abs(calc_cap - reported_cap) / reported_cap * 100
-        print(f"  市值验算:   ✅ 一致（推算法，偏差 {float(diff):.1f}%）")
-    except Exception:
-        pass
+    print(f"  PE(动态):   {s['市盈率-动态']}")
+    print(f"  PB:         {s['市净率']}")
+    print(f"  总市值:     {s['总市值'] / 1e8:.2f} 亿")
+    print(f"  流通市值:   {s['流通市值'] / 1e8:.2f} 亿")
 
 
 def cmd_financials(code: str):
     """近5年核心财务数据。"""
-    qq_code = _qq_code(code)
-    raw = _curl(f"https://qt.gtimg.cn/q={qq_code}")
-    d = _parse_qq_quote(raw)
-    name = d.get("name", code) if d else code
-
     code_clean = code.strip().replace(".SH", "").replace(".SZ", "").replace(".BJ", "")
     market = "SH" if code_clean.startswith(("6", "9", "5")) else "SZ"
+    symbol = f"{code_clean}.{market}"
 
-    # 东方财富 datacenter API（年报数据）
-    fin_url = "https://datacenter.eastmoney.com/securities/api/data/get"
-    params = {
-        "type": "RPT_F10_FINANCE_MAINFINADATA",
-        "sty": "ALL",
-        "filter": f'(SECUCODE="{code_clean}.{market}")(REPORT_TYPE="年报")',
-        "p": "1",
-        "ps": "5",
-        "sr": "-1",
-        "st": "REPORT_DATE",
-        "source": "HSF10",
-        "client": "PC",
-    }
-    reports = []
-    try:
-        data = _curl_json(fin_url, params)
-        reports = data.get("result", {}).get("data", [])
-    except Exception as e:
-        print(f"  [WARN] 财务数据获取失败(年报): {e}", file=sys.stderr)
+    df = ak.stock_financial_analysis_indicator_em(symbol=symbol, indicator="按报告期")
+    if df is None or df.empty:
+        print(f"❌ 未获取到 {code_clean} 的财务数据")
+        return
 
-    # 如果年报筛选无结果，去掉年报限制
-    if not reports:
-        params["filter"] = f'(SECUCODE="{code_clean}.{market}")'
-        try:
-            data = _curl_json(fin_url, params)
-            reports = data.get("result", {}).get("data", [])
-        except Exception as e:
-            print(f"  [WARN] 财务数据获取失败(全部): {e}", file=sys.stderr)
+    # 筛选年报
+    annual = df[df["REPORT_DATE_NAME"].str.contains("年年报", na=False)]
+    if annual.empty:
+        annual = df  # 如果没有年报，用全部数据
+
+    # 取近5年
+    recent = annual.head(5)
+
+    # 获取名称
+    spot_df = ak.stock_zh_a_spot_em()
+    name_row = spot_df[spot_df["代码"] == code_clean]
+    name = name_row.iloc[0]["名称"] if not name_row.empty else code_clean
 
     print("=" * 60)
     print(f"核心财务数据: {name} ({code_clean})")
     print("=" * 60)
 
-    if not reports:
-        print("  ⚠️ 未能获取财务数据，建议通过 WebSearch 补充")
-        return
-
-    for r in reports[:5]:
-        date = r.get("REPORT_DATE", "")[:10]
-        report_name = r.get("REPORT_DATE_NAME", "")
-        revenue = r.get("TOTALOPERATEREVE")
-        net_profit = r.get("PARENTNETPROFIT")
-        eps = r.get("EPSJB")
-        bps = r.get("BPS")
-        roe = r.get("ROEJQ")
-        rev_growth = r.get("TOTALOPERATEREVETZ")
-        profit_growth = r.get("PARENTNETPROFITTZ")
-
+    for _, row in recent.iterrows():
+        date = str(row.get("REPORT_DATE", ""))[:10]
+        report_name = row.get("REPORT_DATE_NAME", "")
         print(f"\n  --- {date} {report_name} ---")
-        if revenue is not None:
-            print(f"  营收:           {_fmt_yi(revenue)}")
-        if rev_growth is not None:
-            print(f"  营收增速:       {_fmt_pct(rev_growth)}")
-        if net_profit is not None:
-            print(f"  归母净利润:     {_fmt_yi(net_profit)}")
-        if profit_growth is not None:
-            print(f"  净利润增速:     {_fmt_pct(profit_growth)}")
-        if eps is not None:
-            print(f"  基本每股收益:   {eps}")
-        if bps is not None:
-            print(f"  每股净资产:     {bps:.2f}")
-        if roe is not None:
-            print(f"  ROE(加权):      {_fmt_pct(roe)}")
+        rev = row.get("TOTALOPERATEREVE")
+        print(f"  营收:           {rev / 1e8:.2f}亿" if pd.notna(rev) else "  营收:           -")
+        rev_g = row.get("TOTALOPERATEREVETZ")
+        print(f"  营收增速:       {_fmt_pct(rev_g)}" if pd.notna(rev_g) else "  营收增速:       -")
+        profit = row.get("PARENTNETPROFIT")
+        print(f"  归母净利润:     {profit / 1e8:.2f}亿" if pd.notna(profit) else "  归母净利润:     -")
+        profit_g = row.get("PARENTNETPROFITTZ")
+        print(f"  净利润增速:     {_fmt_pct(profit_g)}" if pd.notna(profit_g) else "  净利润增速:     -")
+        eps = row.get("EPSJB")
+        print(f"  基本每股收益:   {eps}" if pd.notna(eps) else "  基本每股收益:   -")
+        bps = row.get("BPS")
+        print(f"  每股净资产:     {bps:.2f}" if pd.notna(bps) else "  每股净资产:     -")
+        roe = row.get("ROEJQ")
+        print(f"  ROE(加权):      {_fmt_pct(roe)}" if pd.notna(roe) else "  ROE(加权):      -")
 
 
 def cmd_search(keyword: str):
     """搜索股票代码。"""
-    url = "https://searchadapter.eastmoney.com/api/suggest/get"
-    params = {
-        "input": keyword,
-        "type": "14",
-        "count": "10",
-    }
-    data = _curl_json(url, params)
-    results = data.get("QuotationCodeTable", {}).get("Data", [])
+    all_stocks = ak.stock_info_a_code_name()
+    matches = all_stocks[all_stocks["name"].str.contains(keyword, na=False)]
 
-    if not results:
+    if matches.empty:
         print(f"❌ 未找到匹配 '{keyword}' 的股票")
         return
 
     print("=" * 60)
     print(f"搜索结果: '{keyword}'")
     print("=" * 60)
-    for r in results:
-        code = r.get("Code", "")
-        name = r.get("Name", "")
-        market = r.get("MktNum", "")
-        mkt_label = {"1": "沪", "2": "深", "3": "北"}.get(str(market), "")
-        print(f"  {code} {name} [{mkt_label}]")
+    for _, row in matches.head(10).iterrows():
+        code = row["code"]
+        name = row["name"]
+        market = "沪" if code.startswith(("6", "9", "5")) else ("深" if code.startswith(("0", "3", "2")) else "北")
+        print(f"  {code} {name} [{market}]")
 
 
 # ---------------------------------------------------------------------------
 # CLI 入口
 # ---------------------------------------------------------------------------
 
+
 def main():
     parser = argparse.ArgumentParser(
-        description="A股数据工具 — 腾讯行情 + 东方财富财务数据",
+        description="A股数据工具 — AKShare 行情/财务/搜索",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     sub = parser.add_subparsers(dest="command")

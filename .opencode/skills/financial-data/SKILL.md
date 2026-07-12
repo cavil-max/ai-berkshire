@@ -25,9 +25,14 @@ This skill is generated from `skills/financial-data.md` so Claude Code, Codex, O
 
 | 优先级 | 来源 | URL | 获取方式 |
 |--------|------|-----|---------|
-| 1（主） | **macrotrends** | macrotrends.net/stocks/charts/{ticker} | 直接访问，无需注册 |
-| 2（副） | **stockanalysis** | stockanalysis.com/stocks/{ticker}/financials | 直接访问，无需注册 |
+| 1（主） | **SEC EDGAR** | `python3 tools/us_fundamentals.py financials {ticker}` | edgartools 库，XBRL 结构化数据，官方免费 |
+| 2（副） | **macrotrends** | macrotrends.net/stocks/charts/{ticker} | 直接访问，无需注册 |
+| 3（副） | **stockanalysis** | stockanalysis.com/stocks/{ticker}/financials | 直接访问，无需注册 |
 | 原始一手 | SEC EDGAR | sec.gov/cgi-bin/browse-edgar | 10-K / 10-Q 原文 |
+
+> **工具优先**：美股基本面数据优先用 `python3 tools/us_fundamentals.py financials {ticker}`
+> 从 SEC EDGAR 获取 XBRL 结构化数据，比抓取 macrotrends 更可靠。
+> macrotrends 和 stockanalysis 作为交叉验证的副来源。
 
 ### 港股（腾讯0700、网易9999、美团3690等）
 
@@ -41,8 +46,13 @@ This skill is generated from `skills/financial-data.md` so Claude Code, Codex, O
 
 | 优先级 | 来源 | URL | 获取方式 |
 |--------|------|-----|---------|
-| 1（主） | **东方财富** | eastmoney.com → 搜股票代码 → 财务报表 | 直接访问 |
-| 2（副） | **巨潮资讯** | cninfo.com.cn | 原始年报/季报PDF |
+| 1（主） | **AKShare 工具** | `python3 tools/ashare_data.py quote/financials/valuation {code}` | akshare 库，封装东方财富数据 |
+| 2（副） | **东方财富** | eastmoney.com → 搜股票代码 → 财务报表 | 直接访问 |
+| 3（副） | **巨潮资讯** | cninfo.com.cn | 原始年报/季报PDF |
+
+> **工具优先**：A股数据优先用 `python3 tools/ashare_data.py` 获取，
+> 底层通过 AKShare 封装东方财富 API，自动处理参数变更和编码问题。
+> 东方财富网页和巨潮资讯作为交叉验证的副来源。
 
 ---
 
