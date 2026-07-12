@@ -3,7 +3,8 @@
 ## 项目概述
 
 基于 Claude Code 的价值投资研究 Skill 合集。四大师框架：巴菲特、芒格、段永平、李录。
-同时兼容 Codex 与 OpenClaw：`codex-skills/` 与 `openclaw-skills/` 由脚本从 `skills/` 生成。
+同时兼容 Codex、OpenClaw、opencode 与 Hermes：`codex-skills/`、`openclaw-skills/`、
+`hermes-skills/` 由脚本从 `skills/` 生成。
 GitHub: cavil-max/ai-berkshire
 
 ## 项目结构
@@ -12,6 +13,7 @@ GitHub: cavil-max/ai-berkshire
 skills/          — 投研 Skill 定义（.md），复制到 ~/.claude/commands/ 使用
 codex-skills/    — Codex skill 包，由 scripts/sync-codex-skills.py 生成
 openclaw-skills/ — OpenClaw skill 包，由 scripts/sync-openclaw-skills.py 生成
+hermes-skills/   — Hermes skill 包，由 scripts/sync-hermes-skills.py 生成
 tools/           — 辅助工具（financial_rigor.py 精确计算）
 reports/         — 投资研究报告输出
 assets/          — 图片等静态资源
@@ -160,4 +162,23 @@ python3 scripts/sync-opencode.py
 python3 scripts/sync-opencode.py --check
 ```
 
-安装后重启 opencode 或开新会话，commands 会以 slash command 形式可用。
+ 安装后重启 opencode 或开新会话，commands 会以 slash command 形式可用。
+
+## Hermes 使用
+
+Hermes 用户通过 `hermes-skills/` 加载本框架 skill。Hermes 的 skills 系统兼容
+AgentSkills 开放标准，与 OpenClaw 共用同一规范。
+
+```bash
+# 批量 symlink 到 Hermes skills 目录（默认 ~/.hermes/skills）
+./scripts/install-hermes-skills.sh
+
+# 或复制而非 symlink（不依赖源仓库路径）
+./scripts/install-hermes-skills.sh --copy
+
+# 校验产物是否最新（不重写文件）
+python3 scripts/sync-hermes-skills.py --check
+```
+
+安装后重启 Hermes 或开新会话，skill 会以 slash command 形式可用。
+修改 `skills/*.md` 后，运行 `python3 scripts/sync-hermes-skills.py` 重新生成。

@@ -1,8 +1,8 @@
 # AI Berkshire — Codex 指南
 
 本仓库包含投资研究工作流、报告和共享校验工具。需同时兼容 Claude Code、
-Codex 与 OpenClaw 用户。项目通用约定（报告目录结构、命名规范、投研核心原则、
-GitHub 操作等）见 `CLAUDE.md`；本文件聚焦 Codex 行为、兼容性与工具链规则。
+Codex、OpenClaw、opencode 与 Hermes 用户。项目通用约定（报告目录结构、命名规范、
+投研核心原则、GitHub 操作等）见 `CLAUDE.md`；本文件聚焦 Codex 行为、兼容性与工具链规则。
 
 ## 中文使用者交互偏好
 
@@ -23,6 +23,9 @@ GitHub 操作等）见 `CLAUDE.md`；本文件聚焦 Codex 行为、兼容性与
 - `openclaw-skills/*/SKILL.md`：由 `scripts/sync-openclaw-skills.py` 从
   `skills/*.md` 生成的 OpenClaw skill 包，遵循 AgentSkills spec，
   默认从 `~/.openclaw/workspace/skills` 加载。
+- `hermes-skills/*/SKILL.md`：由 `scripts/sync-hermes-skills.py` 从
+  `skills/*.md` 生成的 Hermes skill 包，遵循 AgentSkills spec，
+  默认从 `~/.hermes/skills` 加载。
 - `opencode.json`：opencode 项目配置，声明 `AGENTS.md` 为 instructions 源，
   并注册 `.opencode/skills` 为 skill 搜索路径。
 - `.opencode/command/*.md`：由 `scripts/sync-opencode.py` 从 `skills/*.md`
@@ -37,12 +40,15 @@ GitHub 操作等）见 `CLAUDE.md`；本文件聚焦 Codex 行为、兼容性与
 - `scripts/sync-codex-skills.py`：从 `skills/*.md` 重新生成 Codex skills。
 - `scripts/sync-openclaw-skills.py`：从 `skills/*.md` 重新生成 OpenClaw skills。
 - `scripts/sync-opencode.py`：从 `skills/*.md` 重新生成 opencode commands 和 skills。
+- `scripts/sync-hermes-skills.py`：从 `skills/*.md` 重新生成 Hermes skills。
 - `scripts/install-codex-skills.sh` / `.bat`：本地安装 Codex skills。
 - `scripts/install-openclaw-skills.sh` / `.bat`：本地安装 OpenClaw skills。
 - `scripts/install-codex-prompts.sh` / `.bat`：本地安装生成的 Codex slash prompts。
 - `scripts/install-claude-commands.sh` / `.bat`：本地安装 Claude Code commands。
 - `scripts/install-opencode.sh` / `.bat`：本地安装 opencode commands（可选 `--skills`
   同时安装 skills）到 `~/.config/opencode/`。
+- `scripts/install-hermes-skills.sh` / `.bat`：本地安装 Hermes skills 到
+  `~/.hermes/skills/`。
 
 ## 兼容性规则
 
@@ -55,9 +61,12 @@ GitHub 操作等）见 `CLAUDE.md`；本文件聚焦 Codex 行为、兼容性与
   `python3 scripts/sync-openclaw-skills.py`
 - 需要 opencode 兼容时，额外运行：
   `python3 scripts/sync-opencode.py`
+- 需要 Hermes 兼容时，额外运行：
+  `python3 scripts/sync-hermes-skills.py`
 - 不要手动编辑生成的 `codex-skills/*/SKILL.md`、
-  `openclaw-skills/*/SKILL.md` 或 `.opencode/command/*.md`、
-  `.opencode/skills/*/SKILL.md`，除非同时更新对应的 `skills/` 源文件。
+  `openclaw-skills/*/SKILL.md`、`hermes-skills/*/SKILL.md`、
+  `.opencode/command/*.md` 或 `.opencode/skills/*/SKILL.md`，
+  除非同时更新对应的 `skills/` 源文件。
 - `codex-skills/` 下的 Codex-only 手写包需明确标注 Codex-only；除非有意
   将该工作流也引入 Claude Code，否则不要创建同名 `skills/*.md`。
 - 工具路径需兼容文档约定的 checkout 路径：`~/ai-berkshire/tools/...`
@@ -84,6 +93,7 @@ GitHub 操作等）见 `CLAUDE.md`；本文件聚焦 Codex 行为、兼容性与
   `python3 scripts/sync-codex-skills.py`
   `python3 scripts/sync-openclaw-skills.py`
   `python3 scripts/sync-opencode.py`
+  `python3 scripts/sync-hermes-skills.py`
 - 仅校验生成的 Codex 产物是否最新（不重写文件），运行：
   `python3 scripts/sync-codex-skills.py --check`
   slash prompt 相关时：
@@ -92,3 +102,5 @@ GitHub 操作等）见 `CLAUDE.md`；本文件聚焦 Codex 行为、兼容性与
   `python3 scripts/sync-openclaw-skills.py --check`
   opencode 相关时：
   `python3 scripts/sync-opencode.py --check`
+  Hermes 相关时：
+  `python3 scripts/sync-hermes-skills.py --check`
