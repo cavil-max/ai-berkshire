@@ -1,0 +1,24 @@
+# 数据元信息：correlation_3stocks_2021-2026.csv
+#
+# 三只股票（腾讯/美团/拼多多）的周线价格序列，用于相关性分析。
+
+file: correlation_3stocks_2021-2026.csv
+description: 三股票周线价格序列与相关性分析（2021-05 至 2026）
+source: Yahoo Finance Chart API (query1.finance.yahoo.com/v8/finance/chart)
+generated_by: 手动收集，通过 tools/momentum_backtest.py 的 fetch_price_data() 下载
+generated_date: 2026-07
+data_range:
+  start: 2021-05-03
+  end: 2026-07
+  frequency: 周线（每周一收盘价）
+columns:
+  - date: 日期（周一）
+  - TENCENT: 腾讯控股 (0700.HK)，港币
+  - MEITUAN: 美团 (3690.HK)，港币
+  - PDD: 拼多多 (PDD)，美元
+price_type: 收盘价（adjusted close）
+currency: 各股票原币种（港币/美元）
+notes: |
+  - 价格为复权后收盘价
+  - 港币与美元未做汇率转换，跨市场相关性分析时需注意
+  - 用于分析中概互联网板块内个股联动性

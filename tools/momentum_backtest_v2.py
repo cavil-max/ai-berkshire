@@ -14,6 +14,8 @@ import os
 from datetime import datetime
 from collections import OrderedDict
 
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
+
 # ============================================================
 # 基本面数据（手工录入，比API更准确）
 # ============================================================
@@ -348,7 +350,7 @@ if __name__ == "__main__":
     nvda_manual_analysis()
 
     # AMD：真实日线回测
-    amd_file = "/tmp/AMD_prices.json"
+    amd_file = os.path.join(DATA_DIR, "AMD_prices.json")
     if os.path.exists(amd_file):
         amd_prices = load_prices_from_json(amd_file)
         amd_first = backtest("AMD", amd_prices)
@@ -356,7 +358,7 @@ if __name__ == "__main__":
         print("\n  [WARN] AMD价格数据不可用")
 
     # MU：真实日线回测
-    mu_file = "/tmp/MU_prices.json"
+    mu_file = os.path.join(DATA_DIR, "MU_prices.json")
     if os.path.exists(mu_file):
         mu_prices = load_prices_from_json(mu_file)
         mu_first = backtest("MU", mu_prices)

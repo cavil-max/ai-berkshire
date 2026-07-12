@@ -1,0 +1,31 @@
+# 数据元信息：cross_asset_10y_2016-2026.csv
+#
+# 跨资产 10 年周线价格序列，用于动量回测和相关性分析。
+
+file: cross_asset_10y_2016-2026.csv
+description: 跨资产 10 年周线价格序列（2016-05 至 2026）
+source: Yahoo Finance Chart API (query1.finance.yahoo.com/v8/finance/chart)
+generated_by: 手动收集，通过 tools/momentum_backtest.py 的 fetch_price_data() 下载
+generated_date: 2026-07
+data_range:
+  start: 2016-05-02
+  end: 2026-07
+  frequency: 周线（每周一收盘价）
+columns:
+  - date: 日期（周一）
+  - TENCENT: 腾讯控股 (0700.HK)，港币
+  - AAPL: 苹果，美元
+  - MSFT: 微软，美元
+  - GOOGL: 谷歌，美元
+  - AMZN: 亚马逊，美元
+  - META: Meta，美元
+  - NVDA: 英伟达，美元
+  - TSLA: 特斯拉，美元
+  - MAOTAI: 贵州茅台 (600519.SH)，人民币
+  - LZLJ: 泸州老窖 (000568.SZ)，人民币
+price_type: 收盘价（adjusted close）
+currency: 各股票原币种（港币/美元/人民币）
+notes: |
+  - 价格为复权后收盘价，用于长期趋势和相关性分析
+  - 不同币种未做汇率转换，跨市场比较时需注意
+  - NVDA 和 TSLA 在 2016 年价格较低，后续有拆股

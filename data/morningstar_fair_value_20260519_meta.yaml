@@ -1,0 +1,28 @@
+# 数据元信息：morningstar_fair_value_20260519.csv
+#
+# Morningstar 公允价值筛选器全量输出，含公允价值、星级、护城河等。
+
+file: morningstar_fair_value_20260519.csv
+description: Morningstar 公允价值筛选器全量输出（按潜在涨幅降序）
+source: Morningstar Screener API (lt.morningstar.com/api/rest.svc/klr5zyak8x/security/screener)
+generated_by: tools/morningstar_fair_value.py
+generated_date: 2026-05-19
+total_records: 6126
+columns:
+  - rank: 排名（按 upside_pct 降序）
+  - ticker: 股票代码
+  - name: 公司名称
+  - close_price: 收盘价（美元）
+  - fair_value: Morningstar 分析师公允价值估计（美元）
+  - upside_pct: 潜在涨幅（(fair_value - close_price) / close_price * 100）
+  - star_rating: Morningstar 星级评级（1-5，空值为无评级）
+  - moat: 经济护城河（Wide / Narrow / None，空值为无评级）
+  - uncertainty: 公允价值不确定性评级
+  - sector: 行业板块
+  - industry: 细分行业
+universe: 美股（Nasdaq + NYSE），仅含有公允价值估计的股票
+notes: |
+  - 数据为 2026-05-19 快照，非实时
+  - API URL 中的 klr5zyak8x 是会话标识，可能已失效
+  - 重新生成：python3 tools/morningstar_fair_value.py
+  - 公允价值是 Morningstar 分析师主观判断，不等于内在价值
